@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Warden &amp; Administration Portal - SRM Hostel Complaint Management System</title>
+    <meta name="description" content="SRM Hostel Complaint Management System - Administration Portal">
+    <link rel="icon" type="image/png" href="/images/srm-logo.png">
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <!-- Top Header -->
+    <header class="app-header">
+        <div class="header-left">
+            <img src="/images/srm-logo.png" alt="SRM Institute of Science and Technology" class="brand-logo-img">
+            <span class="brand-divider"></span>
+            <div class="brand-title-group">
+                <span class="brand-title-main">SRM Hostel</span>
+                <span class="brand-title-sub">Complaint Management System</span>
+            </div>
+        </div>
+
+        <div class="header-center">
+            <div class="header-slogan-banner">
+                <span>Warden &amp; Hostel Administration Portal</span>
+            </div>
+        </div>
+
+        <div class="header-right">
+            <div class="user-profile-menu">
+                <div class="user-avatar-circle" style="background: var(--srm-gold); color: #ffffff;">W</div>
+                <span class="user-name-text" id="admin-display-name">Warden</span>
+            </div>
+            <button id="btn-logout" class="btn btn-secondary btn-sm" style="margin-left: 8px;">Logout</button>
+        </div>
+    </header>
+
+    <!-- App Shell (Sidebar + Main Content) -->
+    <div class="app-shell">
+        <!-- Sidebar Navigation -->
+        <aside class="app-sidebar">
+            <button class="sidebar-item active" onclick="filterByCategory('')">
+                <span class="sidebar-icon">📊</span>
+                <span>All Complaints</span>
+            </button>
+            <button class="sidebar-item" onclick="filterByCategory('WATER')">
+                <span class="sidebar-icon">💧</span>
+                <span>Water &amp; Plumbing</span>
+            </button>
+            <button class="sidebar-item" onclick="filterByCategory('ELECTRICITY')">
+                <span class="sidebar-icon">⚡</span>
+                <span>Electrical</span>
+            </button>
+            <button class="sidebar-item" onclick="filterByCategory('WIFI')">
+                <span class="sidebar-icon">📶</span>
+                <span>Internet / Wi-Fi</span>
+            </button>
+            <button class="sidebar-item" onclick="filterByCategory('CLEANING')">
+                <span class="sidebar-icon">🧹</span>
+                <span>Housekeeping</span>
+            </button>
+            <button class="sidebar-item" onclick="filterByCategory('MAINTENANCE')">
+                <span class="sidebar-icon">🔧</span>
+                <span>Room Maintenance</span>
+            </button>
+            <button class="sidebar-item" onclick="filterByCategory('HOSTEL')">
+                <span class="sidebar-icon">🍴</span>
+                <span>Mess &amp; Food</span>
+            </button>
+            <button class="sidebar-item" onclick="filterByCategory('TRANSPORT')">
+                <span class="sidebar-icon">🛡️</span>
+                <span>Security</span>
+            </button>
+            <button class="sidebar-item" onclick="filterByCategory('OTHER')">
+                <span class="sidebar-icon">💬</span>
+                <span>Other Issues</span>
+            </button>
+            <div class="sidebar-divider"></div>
+            <button class="sidebar-item" onclick="API.logout()">
+                <span class="sidebar-icon">🚪</span>
+                <span>Sign Out</span>
+            </button>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="app-main">
+            <!-- Row 1: KPI Statistics -->
+            <div class="dash-row-metrics">
+                <div class="kpi-card">
+                    <div class="kpi-icon-circle total">📋</div>
+                    <div class="kpi-info">
+                        <span class="kpi-label">Total Complaints</span>
+                        <span class="kpi-value" id="admin-stat-total">0</span>
+                    </div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-icon-circle resolved">✓</div>
+                    <div class="kpi-info">
+                        <span class="kpi-label">Resolved</span>
+                        <span class="kpi-value" id="admin-stat-resolved">0</span>
+                    </div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-icon-circle progress">🕒</div>
+                    <div class="kpi-info">
+                        <span class="kpi-label">In Progress</span>
+                        <span class="kpi-value" id="admin-stat-progress">0</span>
+                    </div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-icon-circle pending">⏳</div>
+                    <div class="kpi-info">
+                        <span class="kpi-label">Pending Review</span>
+                        <span class="kpi-value" id="admin-stat-pending">0</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Row 2: Filters Bar -->
+            <div class="card" style="padding: 16px 20px; margin-bottom: 20px;">
+                <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
+                    <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+                        <span style="font-weight: 600; font-size: 0.885rem; color: var(--text-heading);">Filter Complaints:</span>
+                        
+                        <select id="filter-category" style="width: 200px; padding: 7px 12px; font-size: 0.85rem;">
+                            <option value="">All Categories</option>
+                            <option value="WATER">Water &amp; Plumbing</option>
+                            <option value="ELECTRICITY">Electrical</option>
+                            <option value="WIFI">Internet / Wi-Fi</option>
+                            <option value="CLEANING">Housekeeping</option>
+                            <option value="MAINTENANCE">Room Maintenance</option>
+                            <option value="HOSTEL">Mess &amp; Food</option>
+                            <option value="TRANSPORT">Security</option>
+                            <option value="OTHER">Other</option>
+                        </select>
+
+                        <select id="filter-status" style="width: 180px; padding: 7px 12px; font-size: 0.85rem;">
+                            <option value="">All Statuses</option>
+                            <option value="PENDING">Pending</option>
+                            <option value="IN_PROGRESS">In Progress</option>
+                            <option value="RESOLVED">Resolved</option>
+                        </select>
+
+                        <select id="filter-action" style="width: 180px; padding: 7px 12px; font-size: 0.85rem;">
+                            <option value="">All Warden Actions</option>
+                            <option value="NEEDS_ACTION">⏳ Needs Action</option>
+                            <option value="WAITING">🕒 Waiting</option>
+                            <option value="RESPONDED">✓ Responded</option>
+                        </select>
+
+                        <button id="btn-clear-filters" class="btn btn-secondary btn-sm" type="button">Reset</button>
+                    </div>
+
+                    <div style="font-size: 0.825rem; color: var(--text-muted);">
+                        Click on any complaint row below to update status or post an official response.
+                    </div>
+                </div>
+            </div>
+
+            <!-- Row 3: Complaints Table -->
+            <div class="card">
+                <div class="dash-card-header" style="margin-bottom: 12px;">Hostel Resident Complaints</div>
+                <div class="complaints-table-container">
+                    <table class="complaints-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 40px;">#</th>
+                                <th style="width: 160px;">Category</th>
+                                <th>Title &amp; Issue Details</th>
+                                <th style="width: 170px;">Resident &amp; Room</th>
+                                <th style="width: 110px;">Status</th>
+                                <th style="width: 140px;">Warden Action</th>
+                                <th style="width: 100px;">Date</th>
+                            </tr>
+                        </thead>
+                        <tbody id="admin-complaints-table-body">
+                            <!-- Dynamic rows loaded via admin.js -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Admin Action & Resolution Modal -->
+    <div id="admin-action-modal" class="modal-overlay">
+        <div class="modal-container">
+            <div class="modal-header">
+                <div>
+                    <span class="category-badge" id="action-modal-category">Category</span>
+                    <h3 id="action-modal-title" style="margin-top: 0.4rem; font-size: 1.25rem; color: var(--text-heading);">Complaint Title</h3>
+                </div>
+                <button id="btn-close-modal" class="modal-close-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <!-- Resident Details Card -->
+                <div style="background: #f8fafc; padding: 14px 16px; border-radius: 10px; margin-bottom: 1.25rem; font-size: 0.875rem; border: 1px solid var(--border-light);">
+                    <div style="font-weight: 700; color: var(--text-heading); margin-bottom: 0.5rem;">
+                        👤 Resident Information
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+                        <div>Name: <strong id="action-modal-student-name">-</strong></div>
+                        <div>Email: <strong id="action-modal-student-email">-</strong></div>
+                        <div>Registration No: <strong id="action-modal-student-id">-</strong></div>
+                        <div>Department: <strong id="action-modal-student-dept">-</strong></div>
+                        <div style="grid-column: 1 / -1; color: var(--srm-navy);">Hostel Room: <strong id="action-modal-student-room">-</strong></div>
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem; font-size: 0.875rem;">
+                    <div>
+                        <span style="color: var(--text-muted);">Reported Location:</span>
+                        <strong id="action-modal-location" style="margin-left: 0.35rem;">-</strong>
+                    </div>
+                    <div>
+                        <span style="color: var(--text-muted);">Submitted On:</span>
+                        <strong id="action-modal-created" style="margin-left: 0.35rem;">-</strong>
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 1.25rem;">
+                    <h4 style="font-size: 0.9rem; margin-bottom: 0.35rem; color: var(--text-muted);">Resident's Complaint Description</h4>
+                    <div id="action-modal-desc" style="background: #ffffff; border: 1px solid var(--border-light); padding: 12px; border-radius: 8px; font-size: 0.9rem; white-space: pre-wrap;"></div>
+                </div>
+
+                <!-- Admin Action Form -->
+                <form id="form-admin-action">
+                    <div class="form-group">
+                        <label for="action-select-status">Update Lifecycle Status &amp; Warden Action *</label>
+                        <select id="action-select-status" required>
+                            <option value="PENDING">PENDING (Needs Action / Not Responded)</option>
+                            <option value="IN_PROGRESS">IN_PROGRESS (Waiting / Technician Assigned)</option>
+                            <option value="RESOLVED">RESOLVED (Responded / Work Completed)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="action-assigned-staff">Assigned Maintenance Staff / Technician</label>
+                        <input type="text" id="action-assigned-staff" placeholder="e.g. Electrician Kumar / Plumber Murugan">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="action-text-response">Official Response to Resident</label>
+                        <textarea id="action-text-response" rows="3" placeholder="e.g. Electrician assigned. Switchboard inspection scheduled for 2:30 PM."></textarea>
+                    </div>
+
+                    <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1rem;">
+                        <button type="button" class="btn btn-secondary" onclick="document.getElementById('admin-action-modal').classList.remove('active')">Cancel</button>
+                        <button type="submit" id="btn-save-action" class="btn btn-primary">
+                            <span>💾</span> Save &amp; Notify Resident
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Global Toast Container -->
+    <div id="toast-container"></div>
+
+    <script src="/js/api.js?v=3"></script>
+    <script src="/js/admin.js?v=3"></script>
+</body>
+</html>
