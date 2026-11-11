@@ -16,7 +16,7 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/erp/departments")
+@RequestMapping({"/api/departments", "/api/erp/departments"})
 public class DepartmentController {
 
     private final DepartmentService departmentService;
@@ -37,17 +37,11 @@ public class DepartmentController {
 
     @GetMapping
     public ResponseEntity<ApiResponse<List<Department>>> getAllDepartments(HttpSession session) {
-        if (getAuthenticatedStaff(session) == null) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ApiResponse.error("Staff access required"));
-        }
         return ResponseEntity.ok(ApiResponse.ok("Departments retrieved", departmentService.getAllDepartments()));
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<Department>> getDepartmentById(@PathVariable Long id, HttpSession session) {
-        if (getAuthenticatedStaff(session) == null) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ApiResponse.error("Staff access required"));
-        }
         try {
             return ResponseEntity.ok(ApiResponse.ok("Department retrieved", departmentService.getDepartmentById(id)));
         } catch (IllegalArgumentException e) {
@@ -83,11 +77,25 @@ public class DepartmentController {
         }
     }
 
+    @PutMapping("/{id}/status")
+    public ResponseEntity<ApiResponse<Department>> updateDepartmentStatus(@PathVariable Long id, @RequestParam String status, HttpSession session) {
+        User user = getAuthenticatedStaff(session);
+        if (user == null || !user.getRole().isAdmin()) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ApiResponse.error("Admin privileges required"));
+        }
+        try {
+            Department updated = departmentService.updateDepartmentStatus(id, status);
+            return ResponseEntity.ok(ApiResponse.ok("Department status updated successfully", updated));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
+        }
+    }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse<Void>> deleteDepartment(@PathVariable Long id, HttpSession session) {
         User user = getAuthenticatedStaff(session);
-        if (user == null || !user.getRole().isSuperAdmin()) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ApiResponse.error("Super Admin privileges required"));
+        if (user == null || !user.getRole().isAdmin()) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ApiResponse.error("Admin privileges required"));
         }
         try {
             departmentService.deleteDepartment(id);

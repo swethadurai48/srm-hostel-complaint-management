@@ -36,6 +36,12 @@ public class Department {
     @Column(name = "budget")
     private Double budget = 0.0;
 
+    @Column(name = "status", length = 30)
+    private String status = "ACTIVE";
+
+    @Transient
+    private Long employeeCount = 0L;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
@@ -50,6 +56,7 @@ public class Department {
         this.name = name;
         this.description = description;
         this.manager = manager;
+        this.status = "ACTIVE";
     }
 
     @PrePersist
@@ -58,6 +65,9 @@ public class Department {
         this.updatedAt = LocalDateTime.now();
         if (this.budget == null) {
             this.budget = 0.0;
+        }
+        if (this.status == null || this.status.isBlank()) {
+            this.status = "ACTIVE";
         }
     }
 
@@ -137,6 +147,22 @@ public class Department {
 
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public String getStatus() {
+        return status != null ? status : "ACTIVE";
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
+    }
+
+    public Long getEmployeeCount() {
+        return employeeCount != null ? employeeCount : 0L;
+    }
+
+    public void setEmployeeCount(Long employeeCount) {
+        this.employeeCount = employeeCount;
     }
 
     public LocalDateTime getUpdatedAt() {

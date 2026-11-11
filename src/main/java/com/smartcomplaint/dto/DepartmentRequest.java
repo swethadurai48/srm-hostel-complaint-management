@@ -15,6 +15,7 @@ public class DepartmentRequest {
     private String contactEmail;
     private String contactPhone;
     private Double budget;
+    private String status = "ACTIVE";
 
     public DepartmentRequest() {
     }
@@ -73,6 +74,14 @@ public class DepartmentRequest {
 
     public void setBudget(Double budget) {
         this.budget = budget;
+    }
+
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
     }
 }
 

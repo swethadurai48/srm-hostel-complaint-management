@@ -577,7 +577,7 @@ async function handleSaveAssignment(e) {
 
 async function loadEmployeesList() {
     try {
-        allEmployees = await API.request('/api/erp/employees');
+        allEmployees = await API.request('/api/employees');
     } catch (err) {
         console.error('Failed to pre-fetch employees:', err);
     }
@@ -587,51 +587,138 @@ async function loadEmployeesTable() {
     const tbody = document.getElementById('erp-employees-tbody');
     if (!tbody) return;
 
-    tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 24px; color: var(--text-muted);">Loading employee directory...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 24px; color: var(--text-muted);">Loading employee directory...</td></tr>';
 
     try {
-        allEmployees = await API.request('/api/erp/employees');
+        allEmployees = await API.request('/api/employees');
         if (!allEmployees || allEmployees.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 32px; color: var(--text-muted);">No employees registered yet. Click "Add Employee" to register staff.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 32px; color: var(--text-muted);">No employees registered yet. Click "Add Employee" to register staff.</td></tr>';
             return;
         }
 
         tbody.innerHTML = '';
         allEmployees.forEach(emp => {
             const tr = document.createElement('tr');
+            const isActive = emp.status === 'ACTIVE';
+            const deptName = emp.department ? emp.department.name : 'Unassigned';
+            const deptCode = emp.department ? ` (${emp.department.code})` : '';
+
             tr.innerHTML = `
                 <td><strong style="color: var(--brand-navy); font-family: var(--erp-mono);">${escapeHtml(emp.employeeCode)}</strong></td>
                 <td>
                     <div style="font-weight: 600;">${escapeHtml(emp.name)}</div>
                     <div style="font-size: 0.8rem; color: var(--text-muted);">${escapeHtml(emp.email)}</div>
                 </td>
-                <td><strong>${escapeHtml(emp.department ? emp.department.name : 'General')}</strong></td>
+                <td><strong style="color: var(--brand-navy);">${escapeHtml(deptName)}${escapeHtml(deptCode)}</strong></td>
                 <td>${escapeHtml(emp.designation)}</td>
-                <td><span class="status-pill resolved">${emp.status}</span></td>
+                <td><span class="status-pill ${isActive ? 'resolved' : 'pending'}">${escapeHtml(emp.status)}</span></td>
                 <td><strong>${emp.assignedTasksCount || 0}</strong> assigned</td>
-                <td style="font-size: 0.8rem; color: var(--text-muted);">${emp.phone || 'N/A'}</td>
+                <td style="font-size: 0.8rem; color: var(--text-muted);">${escapeHtml(emp.phone || 'N/A')}</td>
+                <td>
+                    <div style="display: flex; gap: 6px;">
+                        <button class="btn btn-secondary btn-sm" onclick="openEditEmployeeModal(${emp.id})">Edit</button>
+                        <button class="btn btn-danger btn-sm" onclick="handleDeleteEmployee(${emp.id}, '${escapeHtml(emp.name)}')">Delete</button>
+                    </div>
+                </td>
             `;
             tbody.appendChild(tr);
         });
     } catch (err) {
-        tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; padding: 24px; color: #ef4444;">Error: ${err.message}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; padding: 24px; color: #ef4444;">Error: ${err.message}</td></tr>`;
     }
+}
+
+/**
+ * Dynamically fetches and populates the Department dropdown from PostgreSQL.
+ * Shows loading state, handles errors, and displays human-readable department names.
+ */
+async function populateDepartmentDropdown(selectId, loadingId, errorId, selectedId = null) {
+    const select = document.getElementById(selectId);
+    const loading = document.getElementById(loadingId);
+    const error = document.getElementById(errorId);
+
+    if (!select) return;
+
+    if (loading) loading.style.display = 'block';
+    if (error) error.style.display = 'none';
+    select.disabled = true;
+    select.innerHTML = '<option value="" disabled selected>Loading departments from database...</option>';
+
+    try {
+        let depts = null;
+        try {
+            depts = await API.request('/api/departments');
+        } catch {
+            depts = await API.request('/api/erp/departments');
+        }
+
+        allDepartments = Array.isArray(depts) ? depts : [];
+
+        if (loading) loading.style.display = 'none';
+
+        if (allDepartments.length === 0) {
+            select.innerHTML = '<option value="" disabled selected>No departments available</option>';
+            if (error) {
+                error.textContent = 'No departments found in PostgreSQL database. Please create a department first in Department Management.';
+                error.style.display = 'block';
+            }
+            return;
+        }
+
+        // Populate with human-readable department names.
+        // NOTE: Static "All Departments" option is explicitly excluded here.
+        select.innerHTML = '<option value="" disabled selected>Select Department...</option>';
+        allDepartments.forEach(d => {
+            const isSelected = (selectedId && Number(selectedId) === Number(d.id)) ? 'selected' : '';
+            const statusLabel = (d.status && d.status !== 'ACTIVE') ? ` [${d.status}]` : '';
+            select.innerHTML += `<option value="${d.id}" ${isSelected}>${escapeHtml(d.name)} (${escapeHtml(d.code)})${statusLabel}</option>`;
+        });
+
+        select.disabled = false;
+    } catch (err) {
+        console.error('Failed to load departments dropdown:', err);
+        if (loading) loading.style.display = 'none';
+        select.innerHTML = '<option value="" disabled selected>Failed to load departments</option>';
+        if (error) {
+            error.textContent = `Error loading departments: ${err.message}. Please check connection and try again.`;
+            error.style.display = 'block';
+        }
+    }
+}
+
+function openAddEmployeeModal() {
+    const modal = document.getElementById('modal-add-employee');
+    const form = document.getElementById('form-add-employee');
+    if (form) form.reset();
+    if (modal) modal.classList.add('active');
+
+    // Fetch and populate department options dynamically upon form open
+    populateDepartmentDropdown('emp-dept', 'emp-dept-loading', 'emp-dept-error');
 }
 
 async function handleRegisterEmployee(e) {
     e.preventDefault();
+    const deptSelect = document.getElementById('emp-dept');
+    const deptVal = deptSelect ? deptSelect.value : '';
+
+    if (!deptVal) {
+        showToast('Please select a valid department for this employee.', 'error');
+        deptSelect?.focus();
+        return;
+    }
+
     const payload = {
         employeeCode: document.getElementById('emp-code').value.trim(),
         name: document.getElementById('emp-name').value.trim(),
         email: document.getElementById('emp-email').value.trim(),
         phone: document.getElementById('emp-phone').value.trim(),
-        departmentId: parseInt(document.getElementById('emp-dept').value),
+        departmentId: parseInt(deptVal),
         designation: document.getElementById('emp-designation').value.trim(),
         skills: document.getElementById('emp-skills').value.trim()
     };
 
     try {
-        await API.request('/api/erp/employees', {
+        await API.request('/api/employees', {
             method: 'POST',
             body: JSON.stringify(payload)
         });
@@ -640,8 +727,85 @@ async function handleRegisterEmployee(e) {
         document.getElementById('form-add-employee').reset();
         await loadEmployeesList();
         loadEmployeesTable();
+        loadDepartmentsTable();
+        loadDashboard();
     } catch (err) {
         showToast('Failed to register employee: ' + err.message, 'error');
+    }
+}
+
+async function openEditEmployeeModal(empId) {
+    const emp = (allEmployees || []).find(e => Number(e.id) === Number(empId));
+    if (!emp) {
+        showToast('Employee record not found', 'error');
+        return;
+    }
+
+    document.getElementById('edit-emp-id').value = emp.id;
+    document.getElementById('edit-emp-code').value = emp.employeeCode || '';
+    document.getElementById('edit-emp-name').value = emp.name || '';
+    document.getElementById('edit-emp-email').value = emp.email || '';
+    document.getElementById('edit-emp-designation').value = emp.designation || '';
+    document.getElementById('edit-emp-status').value = emp.status || 'ACTIVE';
+    document.getElementById('edit-emp-phone').value = emp.phone || '';
+    document.getElementById('edit-emp-skills').value = emp.skills || '';
+
+    const modal = document.getElementById('modal-edit-employee');
+    if (modal) modal.classList.add('active');
+
+    const currentDeptId = emp.department ? emp.department.id : null;
+    await populateDepartmentDropdown('edit-emp-dept', 'edit-emp-dept-loading', 'edit-emp-dept-error', currentDeptId);
+}
+
+async function handleUpdateEmployee(e) {
+    e.preventDefault();
+    const empId = document.getElementById('edit-emp-id').value;
+    const deptSelect = document.getElementById('edit-emp-dept');
+    const deptVal = deptSelect ? deptSelect.value : '';
+
+    if (!deptVal) {
+        showToast('Please select a valid department.', 'error');
+        deptSelect?.focus();
+        return;
+    }
+
+    const payload = {
+        name: document.getElementById('edit-emp-name').value.trim(),
+        email: document.getElementById('edit-emp-email').value.trim(),
+        phone: document.getElementById('edit-emp-phone').value.trim(),
+        departmentId: parseInt(deptVal),
+        designation: document.getElementById('edit-emp-designation').value.trim(),
+        status: document.getElementById('edit-emp-status').value,
+        skills: document.getElementById('edit-emp-skills').value.trim()
+    };
+
+    try {
+        await API.request(`/api/employees/${empId}`, {
+            method: 'PUT',
+            body: JSON.stringify(payload)
+        });
+        showToast('Employee profile and department assignment updated', 'success');
+        document.getElementById('modal-edit-employee').classList.remove('active');
+        await loadEmployeesList();
+        loadEmployeesTable();
+        loadDepartmentsTable();
+    } catch (err) {
+        showToast('Failed to update employee: ' + err.message, 'error');
+    }
+}
+
+async function handleDeleteEmployee(empId, empName) {
+    if (!confirm(`Are you sure you want to remove employee "${empName}"?`)) return;
+
+    try {
+        await API.request(`/api/employees/${empId}`, { method: 'DELETE' });
+        showToast('Employee removed successfully', 'success');
+        await loadEmployeesList();
+        loadEmployeesTable();
+        loadDepartmentsTable();
+        loadDashboard();
+    } catch (err) {
+        showToast('Failed to delete employee: ' + err.message, 'error');
     }
 }
 
@@ -651,17 +815,22 @@ async function handleRegisterEmployee(e) {
 
 async function loadDepartmentsList() {
     try {
-        allDepartments = await API.request('/api/erp/departments');
-        // Populate department dropdowns in forms
-        const deptSelects = [document.getElementById('emp-dept'), document.getElementById('filter-comp-dept')];
-        deptSelects.forEach(sel => {
-            if (sel) {
-                sel.innerHTML = '<option value="">All Departments</option>';
-                allDepartments.forEach(d => {
-                    sel.innerHTML += `<option value="${d.id}">${escapeHtml(d.code)} - ${escapeHtml(d.name)}</option>`;
-                });
-            }
-        });
+        let depts = null;
+        try {
+            depts = await API.request('/api/departments');
+        } catch {
+            depts = await API.request('/api/erp/departments');
+        }
+        allDepartments = Array.isArray(depts) ? depts : [];
+
+        // Populate ONLY the complaints filter dropdown with "All Departments"
+        const filterSelect = document.getElementById('filter-comp-dept');
+        if (filterSelect) {
+            filterSelect.innerHTML = '<option value="">All Departments</option>';
+            allDepartments.forEach(d => {
+                filterSelect.innerHTML += `<option value="${d.id}">${escapeHtml(d.code)} - ${escapeHtml(d.name)}</option>`;
+            });
+        }
     } catch (err) {
         console.error('Failed to pre-fetch departments:', err);
     }
@@ -671,33 +840,143 @@ async function loadDepartmentsTable() {
     const tbody = document.getElementById('erp-departments-tbody');
     if (!tbody) return;
 
-    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 24px; color: var(--text-muted);">Loading departments...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 24px; color: var(--text-muted);">Loading departments...</td></tr>';
 
     try {
-        allDepartments = await API.request('/api/erp/departments');
-        if (!allDepartments || allDepartments.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 32px; color: var(--text-muted);">No departments configured.</td></tr>';
+        let depts = null;
+        try {
+            depts = await API.request('/api/departments');
+        } catch {
+            depts = await API.request('/api/erp/departments');
+        }
+        allDepartments = Array.isArray(depts) ? depts : [];
+
+        if (allDepartments.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 32px; color: var(--text-muted);">No departments configured.</td></tr>';
             return;
         }
 
         tbody.innerHTML = '';
         allDepartments.forEach(dept => {
             const tr = document.createElement('tr');
+            const isActive = dept.status === 'ACTIVE';
+            const employeeCount = dept.employeeCount || 0;
+
             tr.innerHTML = `
-                <td><strong style="color: var(--brand-navy); font-family: var(--erp-mono);">${escapeHtml(dept.code)}</strong></td>
+                <td><strong style="color: var(--brand-navy); font-family: var(--erp-mono);">#${dept.id}</strong></td>
                 <td>
                     <div style="font-weight: 600;">${escapeHtml(dept.name)}</div>
-                    <div style="font-size: 0.8rem; color: var(--text-muted);">${escapeHtml(dept.description || '')}</div>
+                    <span style="font-size: 0.75rem; color: var(--text-muted); font-family: var(--erp-mono);">${escapeHtml(dept.code)}</span>
                 </td>
                 <td>${escapeHtml(dept.manager ? dept.manager.name : 'System Admin')}</td>
+                <td>
+                    <span class="badge" style="background:#eef2ff; color:#3730a3; padding:4px 10px; border-radius:12px; font-weight:600; font-size:0.82rem;">
+                        👥 ${employeeCount} staff
+                    </span>
+                </td>
                 <td>$${Number(dept.budget || 0).toLocaleString()}</td>
-                <td>${escapeHtml(dept.contactEmail || dept.contactPhone || 'Ext: 4400')}</td>
-                <td><button class="btn btn-secondary btn-sm" onclick="alert('Department ${dept.code} Active and Operational.')">Inspect</button></td>
+                <td>
+                    <span class="status-pill ${isActive ? 'resolved' : 'pending'}" style="${!isActive ? 'background:#fee2e2; color:#991b1b;' : ''}">
+                        ${escapeHtml(dept.status || 'ACTIVE')}
+                    </span>
+                </td>
+                <td>
+                    <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                        <button class="btn btn-secondary btn-sm" onclick="openEditDeptModal(${dept.id})">Edit</button>
+                        ${isActive
+                            ? `<button class="btn btn-secondary btn-sm" onclick="toggleDeptStatus(${dept.id}, 'INACTIVE')">Deactivate</button>`
+                            : `<button class="btn btn-secondary btn-sm" onclick="toggleDeptStatus(${dept.id}, 'ACTIVE')">Activate</button>`
+                        }
+                        <button class="btn btn-danger btn-sm" onclick="handleDeleteDept(${dept.id}, '${escapeHtml(dept.name)}', ${employeeCount})">Delete</button>
+                    </div>
+                </td>
             `;
             tbody.appendChild(tr);
         });
     } catch (err) {
-        tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 24px; color: #ef4444;">Error: ${err.message}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; padding: 24px; color: #ef4444;">Error: ${err.message}</td></tr>`;
+    }
+}
+
+function openEditDeptModal(deptId) {
+    const dept = (allDepartments || []).find(d => Number(d.id) === Number(deptId));
+    if (!dept) {
+        showToast('Department not found', 'error');
+        return;
+    }
+
+    document.getElementById('edit-dept-id').value = dept.id;
+    document.getElementById('edit-dept-code').value = dept.code || '';
+    document.getElementById('edit-dept-name').value = dept.name || '';
+    document.getElementById('edit-dept-desc').value = dept.description || '';
+    document.getElementById('edit-dept-status').value = dept.status || 'ACTIVE';
+    document.getElementById('edit-dept-budget').value = dept.budget || 0;
+    document.getElementById('edit-dept-email').value = dept.contactEmail || '';
+    document.getElementById('edit-dept-phone').value = dept.contactPhone || '';
+
+    const modal = document.getElementById('modal-edit-dept');
+    if (modal) modal.classList.add('active');
+}
+
+async function handleUpdateDepartment(e) {
+    e.preventDefault();
+    const deptId = document.getElementById('edit-dept-id').value;
+    const payload = {
+        code: document.getElementById('edit-dept-code').value.trim().toUpperCase(),
+        name: document.getElementById('edit-dept-name').value.trim(),
+        description: document.getElementById('edit-dept-desc').value.trim(),
+        status: document.getElementById('edit-dept-status').value,
+        budget: parseFloat(document.getElementById('edit-dept-budget').value) || 0.0,
+        contactEmail: document.getElementById('edit-dept-email').value.trim(),
+        contactPhone: document.getElementById('edit-dept-phone').value.trim()
+    };
+
+    try {
+        await API.request(`/api/departments/${deptId}`, {
+            method: 'PUT',
+            body: JSON.stringify(payload)
+        });
+        showToast('Department updated successfully', 'success');
+        document.getElementById('modal-edit-dept').classList.remove('active');
+        await loadDepartmentsList();
+        loadDepartmentsTable();
+        loadEmployeesTable();
+    } catch (err) {
+        showToast('Failed to update department: ' + err.message, 'error');
+    }
+}
+
+async function toggleDeptStatus(deptId, targetStatus) {
+    try {
+        await API.request(`/api/departments/${deptId}/status?status=${encodeURIComponent(targetStatus)}`, {
+            method: 'PUT'
+        });
+        showToast(`Department status changed to ${targetStatus}`, 'success');
+        await loadDepartmentsList();
+        loadDepartmentsTable();
+    } catch (err) {
+        showToast('Status update failed: ' + err.message, 'error');
+    }
+}
+
+async function handleDeleteDept(deptId, deptName, employeeCount) {
+    if (employeeCount > 0) {
+        alert(`Cannot delete "${deptName}". It has ${employeeCount} assigned employees. Please reassign the employees first, or deactivate this department instead.`);
+        return;
+    }
+
+    if (!confirm(`Are you sure you want to delete department "${deptName}"? This action cannot be undone.`)) {
+        return;
+    }
+
+    try {
+        await API.request(`/api/departments/${deptId}`, { method: 'DELETE' });
+        showToast(`Department "${deptName}" deleted successfully`, 'success');
+        await loadDepartmentsList();
+        loadDepartmentsTable();
+        loadDashboard();
+    } catch (err) {
+        showToast('Deletion failed: ' + err.message, 'error');
     }
 }
 
@@ -709,19 +988,23 @@ async function handleCreateDepartment(e) {
         description: document.getElementById('dept-desc').value.trim(),
         budget: parseFloat(document.getElementById('dept-budget').value) || 0.0,
         contactEmail: document.getElementById('dept-email').value.trim(),
-        contactPhone: document.getElementById('dept-phone').value.trim()
+        contactPhone: document.getElementById('dept-phone').value.trim(),
+        status: 'ACTIVE'
     };
 
     try {
-        await API.request('/api/erp/departments', {
+        await API.request('/api/departments', {
             method: 'POST',
             body: JSON.stringify(payload)
         });
         showToast('Department successfully created', 'success');
         document.getElementById('modal-add-dept').classList.remove('active');
         document.getElementById('form-add-dept').reset();
+
+        // Refresh the department list immediately after adding a new department
         await loadDepartmentsList();
         loadDepartmentsTable();
+        loadDashboard();
     } catch (err) {
         showToast('Failed to create department: ' + err.message, 'error');
     }
@@ -987,7 +1270,9 @@ function setupModals() {
 
     // Form Submissions
     document.getElementById('form-add-employee')?.addEventListener('submit', handleRegisterEmployee);
+    document.getElementById('form-edit-employee')?.addEventListener('submit', handleUpdateEmployee);
     document.getElementById('form-add-dept')?.addEventListener('submit', handleCreateDepartment);
+    document.getElementById('form-edit-dept')?.addEventListener('submit', handleUpdateDepartment);
     document.getElementById('form-assign-employee')?.addEventListener('submit', handleSaveAssignment);
     document.getElementById('form-detail-comment')?.addEventListener('submit', handleAddComment);
     document.getElementById('form-add-user')?.addEventListener('submit', handleCreateUser);

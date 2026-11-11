@@ -346,7 +346,7 @@
                             <p>Directory of maintenance technicians, staff members, department allocations, and workloads.</p>
                         </div>
                         <div class="module-actions">
-                            <button class="btn btn-primary btn-sm" onclick="openModal('modal-add-employee')">
+                            <button class="btn btn-primary btn-sm" onclick="openAddEmployeeModal()">
                                 <span>➕</span> Add Employee
                             </button>
                         </div>
@@ -364,6 +364,7 @@
                                         <th>Status</th>
                                         <th>Workload</th>
                                         <th>Phone</th>
+                                        <th>Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody id="erp-employees-tbody">
@@ -393,11 +394,12 @@
                             <table class="erp-table">
                                 <thead>
                                     <tr>
-                                        <th>Code</th>
-                                        <th>Department Name</th>
+                                        <th>Dept ID</th>
+                                        <th>Code &amp; Name</th>
                                         <th>Manager / Head</th>
+                                        <th>Employees</th>
                                         <th>Budget</th>
-                                        <th>Contact</th>
+                                        <th>Status</th>
                                         <th>Actions</th>
                                     </tr>
                                 </thead>
@@ -682,9 +684,13 @@
                     </div>
                     <div class="form-group">
                         <label for="emp-dept">Department *</label>
+                        <div id="emp-dept-loading" style="display: none; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 6px;">
+                            <span class="erp-spinner" style="display:inline-block; width:12px; height:12px; border:2px solid #ccc; border-top-color:var(--brand-navy); border-radius:50%; animation: spin 0.8s linear infinite;"></span> Fetching available departments...
+                        </div>
                         <select class="form-control" id="emp-dept" required>
-                            <!-- Populated via erp.js -->
+                            <option value="" disabled selected>Select Department...</option>
                         </select>
+                        <div id="emp-dept-error" style="display: none; font-size: 0.82rem; color: #ef4444; margin-top: 6px; padding: 6px 10px; background: #fef2f2; border: 1px solid #fecaca; border-radius: 6px;"></div>
                     </div>
                     <div class="form-group">
                         <label for="emp-designation">Designation / Role *</label>
@@ -702,6 +708,67 @@
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary btn-modal-cancel">Cancel</button>
                     <button type="submit" class="btn btn-primary">Save Employee</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Edit Employee (HRM) -->
+    <div class="modal-backdrop" id="modal-edit-employee">
+        <div class="modal-window">
+            <div class="modal-header">
+                <h3 class="modal-title">Edit Employee / Department Assignment</h3>
+                <button class="modal-close-btn">&times;</button>
+            </div>
+            <form id="form-edit-employee">
+                <input type="hidden" id="edit-emp-id">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="edit-emp-code">Employee Code</label>
+                        <input type="text" class="form-control" id="edit-emp-code" readonly style="background: var(--bg-tertiary); font-family: var(--erp-mono);">
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-emp-name">Full Name *</label>
+                        <input type="text" class="form-control" id="edit-emp-name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-emp-email">Email Address *</label>
+                        <input type="email" class="form-control" id="edit-emp-email" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-emp-dept">Assigned Department *</label>
+                        <div id="edit-emp-dept-loading" style="display: none; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 6px;">
+                            <span class="erp-spinner" style="display:inline-block; width:12px; height:12px; border:2px solid #ccc; border-top-color:var(--brand-navy); border-radius:50%; animation: spin 0.8s linear infinite;"></span> Fetching departments...
+                        </div>
+                        <select class="form-control" id="edit-emp-dept" required>
+                            <option value="" disabled selected>Select Department...</option>
+                        </select>
+                        <div id="edit-emp-dept-error" style="display: none; font-size: 0.82rem; color: #ef4444; margin-top: 6px; padding: 6px 10px; background: #fef2f2; border: 1px solid #fecaca; border-radius: 6px;"></div>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-emp-designation">Designation / Role *</label>
+                        <input type="text" class="form-control" id="edit-emp-designation" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-emp-status">Employment Status *</label>
+                        <select class="form-control" id="edit-emp-status" required>
+                            <option value="ACTIVE">ACTIVE</option>
+                            <option value="ON_LEAVE">ON_LEAVE</option>
+                            <option value="INACTIVE">INACTIVE</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-emp-phone">Phone / Extension</label>
+                        <input type="text" class="form-control" id="edit-emp-phone">
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-emp-skills">Skills &amp; Specializations</label>
+                        <input type="text" class="form-control" id="edit-emp-skills">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-modal-cancel">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
                 </div>
             </form>
         </div>
@@ -744,6 +811,56 @@
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary btn-modal-cancel">Cancel</button>
                     <button type="submit" class="btn btn-primary">Create Department</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Edit Department -->
+    <div class="modal-backdrop" id="modal-edit-dept">
+        <div class="modal-window">
+            <div class="modal-header">
+                <h3 class="modal-title">Edit Department</h3>
+                <button class="modal-close-btn">&times;</button>
+            </div>
+            <form id="form-edit-dept">
+                <input type="hidden" id="edit-dept-id">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="edit-dept-code">Department Code *</label>
+                        <input type="text" class="form-control" id="edit-dept-code" required maxlength="10" style="font-family: var(--erp-mono);">
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-dept-name">Department Name *</label>
+                        <input type="text" class="form-control" id="edit-dept-name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-dept-desc">Description</label>
+                        <textarea class="form-control" id="edit-dept-desc" rows="2"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-dept-status">Status *</label>
+                        <select class="form-control" id="edit-dept-status" required>
+                            <option value="ACTIVE">ACTIVE</option>
+                            <option value="INACTIVE">INACTIVE</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-dept-budget">Allocated Budget ($)</label>
+                        <input type="number" class="form-control" id="edit-dept-budget" step="1000">
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-dept-email">Contact Email</label>
+                        <input type="email" class="form-control" id="edit-dept-email">
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-dept-phone">Contact Extension</label>
+                        <input type="text" class="form-control" id="edit-dept-phone">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-modal-cancel">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
                 </div>
             </form>
         </div>

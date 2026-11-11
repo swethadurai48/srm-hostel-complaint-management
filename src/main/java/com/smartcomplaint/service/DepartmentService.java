@@ -38,13 +38,25 @@ public class DepartmentService {
 
     @Transactional(readOnly = true)
     public List<Department> getAllDepartments() {
-        return departmentRepository.findAll();
+        List<Department> list = departmentRepository.findAll();
+        for (Department dept : list) {
+            dept.setEmployeeCount(employeeRepository.countByDepartment(dept));
+            if (dept.getStatus() == null || dept.getStatus().isBlank()) {
+                dept.setStatus("ACTIVE");
+            }
+        }
+        return list;
     }
 
     @Transactional(readOnly = true)
     public Department getDepartmentById(Long id) {
-        return departmentRepository.findById(id)
+        Department dept = departmentRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Department not found with id: " + id));
+        dept.setEmployeeCount(employeeRepository.countByDepartment(dept));
+        if (dept.getStatus() == null || dept.getStatus().isBlank()) {
+            dept.setStatus("ACTIVE");
+        }
+        return dept;
     }
 
     @Transactional
@@ -66,8 +78,10 @@ public class DepartmentService {
         dept.setContactEmail(req.getContactEmail());
         dept.setContactPhone(req.getContactPhone());
         dept.setBudget(req.getBudget() != null ? req.getBudget() : 0.0);
+        dept.setStatus(req.getStatus() != null && !req.getStatus().isBlank() ? req.getStatus().trim().toUpperCase() : "ACTIVE");
 
         Department saved = departmentRepository.save(dept);
+        saved.setEmployeeCount(0L);
         auditService.log(manager, "CREATE_DEPARTMENT", "Department:" + saved.getCode(), null,
                 "Department " + saved.getName() + " created");
         return saved;
@@ -106,11 +120,27 @@ public class DepartmentService {
         if (req.getBudget() != null) {
             dept.setBudget(req.getBudget());
         }
+        if (req.getStatus() != null && !req.getStatus().isBlank()) {
+            dept.setStatus(req.getStatus().trim().toUpperCase());
+        }
 
         Department updated = departmentRepository.save(dept);
+        updated.setEmployeeCount(employeeRepository.countByDepartment(updated));
         auditService.log(dept.getManager(), "UPDATE_DEPARTMENT", "Department:" + updated.getCode(), null,
                 "Department " + updated.getName() + " updated");
         return updated;
+    }
+
+    @Transactional
+    public Department updateDepartmentStatus(Long id, String status) {
+        Department dept = getDepartmentById(id);
+        String targetStatus = (status != null && status.equalsIgnoreCase("INACTIVE")) ? "INACTIVE" : "ACTIVE";
+        dept.setStatus(targetStatus);
+        Department saved = departmentRepository.save(dept);
+        saved.setEmployeeCount(employeeRepository.countByDepartment(saved));
+        auditService.log(null, "UPDATE_DEPT_STATUS", "Department:" + saved.getCode(), null,
+                "Department " + saved.getName() + " status updated to " + targetStatus);
+        return saved;
     }
 
     @Transactional
@@ -118,7 +148,7 @@ public class DepartmentService {
         Department dept = getDepartmentById(id);
         long employeeCount = employeeRepository.countByDepartment(dept);
         if (employeeCount > 0) {
-            throw new IllegalStateException("Cannot delete department with " + employeeCount + " assigned employees. Reassign employees first.");
+            throw new IllegalStateException("Cannot delete department with " + employeeCount + " assigned employees. Please reassign employees or deactivate the department instead.");
         }
         departmentRepository.delete(dept);
         auditService.log(null, "DELETE_DEPARTMENT", "Department:" + dept.getCode(), null,

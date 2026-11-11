@@ -1039,3 +1039,21 @@ textarea.form-control {
         display: none;
     }
 }
+
+/* Spinner helper for asynchronous loading indicators */
+.erp-spinner {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border: 2px solid rgba(19, 50, 118, 0.2);
+    border-top-color: var(--brand-navy);
+    border-radius: 50%;
+    animation: erp-spin 0.8s linear infinite;
+    vertical-align: middle;
+}
+
+@keyframes erp-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
