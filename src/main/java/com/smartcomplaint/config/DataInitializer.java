@@ -1,17 +1,14 @@
 package com.smartcomplaint.config;
 
-import com.smartcomplaint.model.Category;
-import com.smartcomplaint.model.Complaint;
-import com.smartcomplaint.model.ComplaintStatus;
-import com.smartcomplaint.model.Role;
-import com.smartcomplaint.model.User;
-import com.smartcomplaint.repository.ComplaintRepository;
-import com.smartcomplaint.repository.UserRepository;
+import com.smartcomplaint.model.*;
+import com.smartcomplaint.repository.*;
 import com.smartcomplaint.service.UserService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Configuration;
+
+import java.time.LocalDateTime;
 
 @Configuration
 public class DataInitializer implements CommandLineRunner {
@@ -20,12 +17,23 @@ public class DataInitializer implements CommandLineRunner {
 
     private final UserRepository userRepository;
     private final ComplaintRepository complaintRepository;
-    private final com.smartcomplaint.repository.NoticeRepository noticeRepository;
+    private final NoticeRepository noticeRepository;
+    private final DepartmentRepository departmentRepository;
+    private final EmployeeRepository employeeRepository;
+    private final SlaConfigurationRepository slaConfigurationRepository;
 
-    public DataInitializer(UserRepository userRepository, ComplaintRepository complaintRepository, com.smartcomplaint.repository.NoticeRepository noticeRepository) {
+    public DataInitializer(UserRepository userRepository,
+                           ComplaintRepository complaintRepository,
+                           NoticeRepository noticeRepository,
+                           DepartmentRepository departmentRepository,
+                           EmployeeRepository employeeRepository,
+                           SlaConfigurationRepository slaConfigurationRepository) {
         this.userRepository = userRepository;
         this.complaintRepository = complaintRepository;
         this.noticeRepository = noticeRepository;
+        this.departmentRepository = departmentRepository;
+        this.employeeRepository = employeeRepository;
+        this.slaConfigurationRepository = slaConfigurationRepository;
     }
 
     @Override
@@ -160,6 +168,133 @@ public class DataInitializer implements CommandLineRunner {
                     base.minusDays(12)
             ));
             log.info("Official hostel notices successfully seeded into PostgreSQL.");
+        }
+
+        // Seed Enterprise SLA Configurations if none exist
+        if (slaConfigurationRepository.count() == 0) {
+            slaConfigurationRepository.save(new SlaConfiguration(Priority.URGENT, null, 4, 2));
+            slaConfigurationRepository.save(new SlaConfiguration(Priority.HIGH, null, 12, 6));
+            slaConfigurationRepository.save(new SlaConfiguration(Priority.MEDIUM, null, 24, 12));
+            slaConfigurationRepository.save(new SlaConfiguration(Priority.LOW, null, 48, 24));
+            log.info("Enterprise SLA configurations successfully seeded.");
+        }
+
+        // Seed Enterprise Departments if none exist
+        if (departmentRepository.count() == 0) {
+            Department elec = new Department("ELEC", "Electrical & Power Systems", "Campus electrical wiring, switchboards, lighting, and power backup maintenance.", admin);
+            elec.setContactEmail("electrical.hostel@srmist.edu.in");
+            elec.setContactPhone("Ext: 4401");
+            elec.setBudget(75000.0);
+            departmentRepository.save(elec);
+
+            Department plumb = new Department("PLUMB", "Plumbing & Water Infrastructure", "Water supply, RO plants, restrooms, fixtures, and pipeline management.", admin);
+            plumb.setContactEmail("plumbing.hostel@srmist.edu.in");
+            plumb.setContactPhone("Ext: 4402");
+            plumb.setBudget(60000.0);
+            departmentRepository.save(plumb);
+
+            Department net = new Department("NET", "IT & Campus Network", "Hostel Wi-Fi access points, fiber switches, and LAN connectivity support.", admin);
+            net.setContactEmail("wifi.hostel@srmist.edu.in");
+            net.setContactPhone("Ext: 4403");
+            net.setBudget(90000.0);
+            departmentRepository.save(net);
+
+            Department house = new Department("HOUSE", "Housekeeping & Sanitation", "Corridor cleanliness, room sanitation, waste disposal, and hygiene.", admin);
+            house.setContactEmail("housekeeping.hostel@srmist.edu.in");
+            house.setContactPhone("Ext: 4404");
+            house.setBudget(45000.0);
+            departmentRepository.save(house);
+
+            Department maint = new Department("MAINT", "Civil & Room Maintenance", "Carpentry, doors, windows, furniture repair, and civil construction.", admin);
+            maint.setContactEmail("civil.hostel@srmist.edu.in");
+            maint.setContactPhone("Ext: 4405");
+            maint.setBudget(85000.0);
+            departmentRepository.save(maint);
+
+            Department mess = new Department("MESS", "Dining & Mess Quality", "Dining hall operations, food hygiene, caterer supervision, and nutrition.", admin);
+            mess.setContactEmail("mess.hostel@srmist.edu.in");
+            mess.setContactPhone("Ext: 4406");
+            mess.setBudget(120000.0);
+            departmentRepository.save(mess);
+
+            Department sec = new Department("SEC", "Hostel Security & Safety", "Main gate control, visitor management, resident security, and night patrol.", admin);
+            sec.setContactEmail("security.hostel@srmist.edu.in");
+            sec.setContactPhone("Ext: 2222");
+            sec.setBudget(50000.0);
+            departmentRepository.save(sec);
+
+            log.info("Enterprise Departments successfully initialized.");
+        }
+
+        // Seed Enterprise Employees if none exist
+        if (employeeRepository.count() == 0) {
+            Department elecDept = departmentRepository.findByCode("ELEC").orElse(null);
+            Department plumbDept = departmentRepository.findByCode("PLUMB").orElse(null);
+            Department netDept = departmentRepository.findByCode("NET").orElse(null);
+            Department houseDept = departmentRepository.findByCode("HOUSE").orElse(null);
+            Department maintDept = departmentRepository.findByCode("MAINT").orElse(null);
+
+            Employee emp1 = new Employee("EMP-ELEC-01", "Rajesh Kumar", "rajesh.elec@srmist.edu.in", elecDept, "Senior Electrician");
+            emp1.setPhone("+91 98401 23451");
+            emp1.setSkills("High voltage wiring, Breaker repair, LED panels, DG sets");
+            employeeRepository.save(emp1);
+
+            Employee emp2 = new Employee("EMP-PLUMB-01", "S. Murugan", "murugan.plumb@srmist.edu.in", plumbDept, "Lead Plumber");
+            emp2.setPhone("+91 98401 23452");
+            emp2.setSkills("Pipeline leakages, RO filtration, Booster pumps, Restroom valves");
+            employeeRepository.save(emp2);
+
+            Employee emp3 = new Employee("EMP-NET-01", "Priya Sharma", "priya.it@srmist.edu.in", netDept, "Network Systems Engineer");
+            emp3.setPhone("+91 98401 23453");
+            emp3.setSkills("Cisco APs, Aruba controllers, Fiber splicing, DHCP & DNS triage");
+            employeeRepository.save(emp3);
+
+            Employee emp4 = new Employee("EMP-HOUSE-01", "A. Ramesh", "ramesh.clean@srmist.edu.in", houseDept, "Sanitation Supervisor");
+            emp4.setPhone("+91 98401 23454");
+            emp4.setSkills("Deep cleaning protocols, Waste management, Chemical inventory");
+            employeeRepository.save(emp4);
+
+            Employee emp5 = new Employee("EMP-MAINT-01", "K. Chandran", "chandran.maint@srmist.edu.in", maintDept, "Chief Carpenter & Civil Tech");
+            emp5.setPhone("+91 98401 23455");
+            emp5.setSkills("Locksmithing, Structural repairs, Aluminum fabrication, Furniture");
+            employeeRepository.save(emp5);
+
+            log.info("Enterprise Employees and Technicians successfully initialized.");
+        }
+
+        // Link existing complaints to Departments and compute SLA due dates if missing
+        for (Complaint c : complaintRepository.findAll()) {
+            boolean updated = false;
+            if (c.getDepartment() == null) {
+                Department targetDept = null;
+                switch (c.getCategory()) {
+                    case ELECTRICITY -> targetDept = departmentRepository.findByCode("ELEC").orElse(null);
+                    case WATER -> targetDept = departmentRepository.findByCode("PLUMB").orElse(null);
+                    case WIFI -> targetDept = departmentRepository.findByCode("NET").orElse(null);
+                    case CLEANING -> targetDept = departmentRepository.findByCode("HOUSE").orElse(null);
+                    case MAINTENANCE -> targetDept = departmentRepository.findByCode("MAINT").orElse(null);
+                    case HOSTEL -> targetDept = departmentRepository.findByCode("MESS").orElse(null);
+                    case TRANSPORT -> targetDept = departmentRepository.findByCode("SEC").orElse(null);
+                    default -> targetDept = departmentRepository.findByCode("MAINT").orElse(null);
+                }
+                if (targetDept != null) {
+                    c.setDepartment(targetDept);
+                    updated = true;
+                }
+            }
+            if (c.getSlaDueDate() == null && c.getCreatedAt() != null) {
+                int hours = switch (c.getPriority() != null ? c.getPriority() : Priority.MEDIUM) {
+                    case URGENT -> 4;
+                    case HIGH -> 12;
+                    case MEDIUM -> 24;
+                    case LOW -> 48;
+                };
+                c.setSlaDueDate(c.getCreatedAt().plusHours(hours));
+                updated = true;
+            }
+            if (updated) {
+                complaintRepository.save(c);
+            }
         }
     }
 }

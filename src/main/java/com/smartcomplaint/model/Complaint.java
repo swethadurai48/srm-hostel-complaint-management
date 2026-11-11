@@ -54,6 +54,19 @@ public class Complaint {
     private String attachmentUrl;
 
     @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "department_id")
+    private Department department;
+
+    @Column(name = "sla_due_date")
+    private LocalDateTime slaDueDate;
+
+    @Column(name = "is_escalated")
+    private Boolean isEscalated = false;
+
+    @Column(name = "cost_estimate")
+    private Double costEstimate = 0.0;
+
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "student_id", nullable = false)
     private User student;
 
@@ -248,5 +261,37 @@ public class Complaint {
 
     public void setAttachmentUrl(String attachmentUrl) {
         this.attachmentUrl = attachmentUrl;
+    }
+
+    public Department getDepartment() {
+        return department;
+    }
+
+    public void setDepartment(Department department) {
+        this.department = department;
+    }
+
+    public LocalDateTime getSlaDueDate() {
+        return slaDueDate;
+    }
+
+    public void setSlaDueDate(LocalDateTime slaDueDate) {
+        this.slaDueDate = slaDueDate;
+    }
+
+    public Boolean getIsEscalated() {
+        return isEscalated != null ? isEscalated : false;
+    }
+
+    public void setIsEscalated(Boolean isEscalated) {
+        this.isEscalated = isEscalated;
+    }
+
+    public Double getCostEstimate() {
+        return costEstimate != null ? costEstimate : 0.0;
+    }
+
+    public void setCostEstimate(Double costEstimate) {
+        this.costEstimate = costEstimate;
     }
 }

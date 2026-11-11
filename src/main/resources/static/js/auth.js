@@ -7,10 +7,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     try {
         const user = await API.getMe();
         if (user) {
-            if (user.role === 'ADMIN') {
+            if (user.role === 'SUPER_ADMIN' || user.role === 'DEPT_MANAGER' || user.role === 'EMPLOYEE') {
+                window.location.href = '/erp.html';
+                return;
+            } else if (user.role === 'ADMIN') {
                 window.location.href = '/admin.html';
                 return;
-            } else if (user.role === 'STUDENT') {
+            } else if (user.role === 'STUDENT' || user.role === 'COMPLAINT_REPORTER') {
                 window.location.href = '/student.html';
                 return;
             }
@@ -56,7 +59,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const user = await API.login(email, password);
                 showToast(`Welcome back, ${user.name}!`, 'success');
                 setTimeout(() => {
-                    if (user.role === 'ADMIN') {
+                    if (user.role === 'SUPER_ADMIN' || user.role === 'DEPT_MANAGER' || user.role === 'EMPLOYEE') {
+                        window.location.href = '/erp.html';
+                    } else if (user.role === 'ADMIN') {
                         window.location.href = '/admin.html';
                     } else {
                         window.location.href = '/student.html';

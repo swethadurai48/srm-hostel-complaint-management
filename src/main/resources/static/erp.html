@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enterprise ERP Portal - SRM Institute of Science and Technology</title>
+    <meta name="description" content="Centralized Enterprise ERP Portal for Campus & Hostel Complaint Operations, HR, Departments, Workflows, and Analytics.">
+    <link rel="icon" type="image/png" href="/images/srm-logo.png">
+    <link rel="stylesheet" href="/css/erp.css?v=2">
+</head>
+<body>
+    <div class="erp-shell">
+        <!-- Enterprise Collapsible Sidebar -->
+        <aside class="erp-sidebar" id="erp-sidebar">
+            <div class="sidebar-header">
+                <img src="/images/srm-logo.png" alt="SRM IST" class="sidebar-logo">
+                <span class="sidebar-brand-title">SRM ERP</span>
+                <span class="sidebar-brand-badge">PROD</span>
+            </div>
+
+            <div class="sidebar-nav">
+                <div class="sidebar-section-title">Core Operations</div>
+                <button class="nav-item active" data-module="dashboard">
+                    <span class="nav-icon">📊</span>
+                    <span class="nav-label">ERP Dashboard</span>
+                </button>
+                <button class="nav-item" data-module="complaints">
+                    <span class="nav-icon">📋</span>
+                    <span class="nav-label">Complaint Center</span>
+                </button>
+
+                <div class="sidebar-section-title">Workforce & Org</div>
+                <button class="nav-item" data-module="employees">
+                    <span class="nav-icon">👥</span>
+                    <span class="nav-label">Human Resources</span>
+                </button>
+                <button class="nav-item" data-module="departments">
+                    <span class="nav-icon">🏢</span>
+                    <span class="nav-label">Departments</span>
+                </button>
+                <button class="nav-item" data-module="workflows">
+                    <span class="nav-icon">⚡</span>
+                    <span class="nav-label">Approvals &amp; SLAs</span>
+                    <span class="nav-badge" id="badge-pending-approvals" style="display: none;">0</span>
+                </button>
+
+                <div class="sidebar-section-title">Intelligence &amp; Governance</div>
+                <button class="nav-item" data-module="reports">
+                    <span class="nav-icon">📈</span>
+                    <span class="nav-label">Reports &amp; BI</span>
+                </button>
+                <button class="nav-item" data-module="users">
+                    <span class="nav-icon">🛡️</span>
+                    <span class="nav-label">User &amp; RBAC</span>
+                </button>
+                <button class="nav-item" data-module="settings">
+                    <span class="nav-icon">⚙️</span>
+                    <span class="nav-label">System &amp; Audit</span>
+                </button>
+            </div>
+
+            <div class="sidebar-footer">
+                <a href="/student.html" class="nav-item" title="Resident / Student Portal">
+                    <span class="nav-icon">👨‍🎓</span>
+                    <span class="nav-label">Resident View</span>
+                </a>
+                <button class="nav-item" onclick="API.logout()" title="Sign Out">
+                    <span class="nav-icon">🚪</span>
+                    <span class="nav-label">Sign Out</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Viewport -->
+        <div class="erp-main-viewport">
+            <!-- Top Navigation Bar -->
+            <header class="erp-topbar">
+                <div class="topbar-left">
+                    <button class="toggle-sidebar-btn" id="btn-toggle-sidebar" title="Toggle Sidebar">☰</button>
+                    <div class="global-search-container">
+                        <span class="search-icon-prefix">🔍</span>
+                        <input type="text" class="global-search-input" id="global-search-input" placeholder="Search complaints, employees, tickets...">
+                        <span class="search-shortcut-kbd">⌘K</span>
+                    </div>
+                </div>
+
+                <div class="topbar-right">
+                    <button class="theme-toggle-btn" id="btn-toggle-theme" title="Toggle Theme">🌙</button>
+                    
+                    <button class="notifications-toggle-btn" id="btn-notifications" title="Notifications">
+                        <span>🔔</span>
+                        <span class="notif-badge-pill" id="topbar-notif-badge" style="display: none;">0</span>
+                    </button>
+
+                    <div class="user-profile-badge">
+                        <div class="user-avatar-circle" id="topbar-user-avatar">AD</div>
+                        <div class="user-meta">
+                            <span class="user-meta-name" id="topbar-user-name">Administrator</span>
+                            <span class="user-meta-role" id="topbar-user-role">SUPER_ADMIN</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Notifications Flyout Drawer -->
+                <div class="notifications-flyout" id="notifications-flyout">
+                    <div class="notif-header">
+                        <strong style="font-size: 0.95rem; color: var(--text-primary);">Notifications</strong>
+                        <button class="btn btn-secondary btn-sm" onclick="markAllNotificationsRead()">Mark all read</button>
+                    </div>
+                    <div class="notif-list" id="notif-items-list">
+                        <!-- Populated by erp.js -->
+                    </div>
+                </div>
+            </header>
+
+            <!-- Main ERP Content Modules -->
+            <main class="erp-content">
+
+                <!-- 1. MODULE: ERP DASHBOARD -->
+                <section id="mod-dashboard" class="portal-module active">
+                    <div class="module-header">
+                        <div class="module-title-group">
+                            <h1>Executive ERP Overview</h1>
+                            <p>Real-time institutional grievance triage, workforce efficiency, and service level compliance.</p>
+                        </div>
+                        <div class="module-actions">
+                            <a href="/api/erp/reports/export-csv" class="btn btn-secondary btn-sm" download>
+                                <span>📥</span> Export CSV
+                            </a>
+                            <button class="btn btn-primary btn-sm" onclick="loadDashboard()">
+                                <span>🔄</span> Refresh
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 8 High-Impact KPI Metrics -->
+                    <div class="kpi-grid">
+                        <div class="kpi-stat-card">
+                            <div class="kpi-top">
+                                <span class="kpi-label">Total Logged</span>
+                                <div class="kpi-icon-pill blue">📋</div>
+                            </div>
+                            <div class="kpi-value" id="kpi-total-complaints">0</div>
+                            <div class="kpi-footer-note">All campus tickets</div>
+                        </div>
+
+                        <div class="kpi-stat-card">
+                            <div class="kpi-top">
+                                <span class="kpi-label">Open / Pending</span>
+                                <div class="kpi-icon-pill amber">⏳</div>
+                            </div>
+                            <div class="kpi-value" id="kpi-open-complaints">0</div>
+                            <div class="kpi-footer-note">Requires triage</div>
+                        </div>
+
+                        <div class="kpi-stat-card">
+                            <div class="kpi-top">
+                                <span class="kpi-label">In Progress</span>
+                                <div class="kpi-icon-pill teal">⚙️</div>
+                            </div>
+                            <div class="kpi-value" id="kpi-progress-complaints">0</div>
+                            <div class="kpi-footer-note">Technician assigned</div>
+                        </div>
+
+                        <div class="kpi-stat-card">
+                            <div class="kpi-top">
+                                <span class="kpi-label">Resolved</span>
+                                <div class="kpi-icon-pill green">✓</div>
+                            </div>
+                            <div class="kpi-value" id="kpi-resolved-complaints">0</div>
+                            <div class="kpi-footer-note">Completed &amp; closed</div>
+                        </div>
+
+                        <div class="kpi-stat-card">
+                            <div class="kpi-top">
+                                <span class="kpi-label">Overdue Tickets</span>
+                                <div class="kpi-icon-pill red">⚠️</div>
+                            </div>
+                            <div class="kpi-value" id="kpi-overdue-complaints">0</div>
+                            <div class="kpi-footer-note">Exceeded SLA limit</div>
+                        </div>
+
+                        <div class="kpi-stat-card">
+                            <div class="kpi-top">
+                                <span class="kpi-label">SLA Compliance</span>
+                                <div class="kpi-icon-pill green">🎯</div>
+                            </div>
+                            <div class="kpi-value" id="kpi-sla-compliance">100%</div>
+                            <div class="kpi-footer-note">On-time resolutions</div>
+                        </div>
+
+                        <div class="kpi-stat-card">
+                            <div class="kpi-top">
+                                <span class="kpi-label">Active Employees</span>
+                                <div class="kpi-icon-pill purple">👥</div>
+                            </div>
+                            <div class="kpi-value" id="kpi-total-employees">0</div>
+                            <div class="kpi-footer-note">Maintenance staff</div>
+                        </div>
+
+                        <div class="kpi-stat-card">
+                            <div class="kpi-top">
+                                <span class="kpi-label">Departments</span>
+                                <div class="kpi-icon-pill blue">🏢</div>
+                            </div>
+                            <div class="kpi-value" id="kpi-total-departments">0</div>
+                            <div class="kpi-footer-note">Operational units</div>
+                        </div>
+                    </div>
+
+                    <!-- Visual Analytics Row: Resolution Chart & Category Breakdown -->
+                    <div class="grid-2col">
+                        <div class="card">
+                            <div class="card-header">
+                                <span class="card-title">Complaint Resolution Trend</span>
+                                <span style="font-size: 0.8rem; color: var(--text-muted);">Last 30 Days</span>
+                            </div>
+                            <div id="chart-resolution-trends" style="height: 180px;">
+                                <!-- SVG Chart rendered by erp.js -->
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <div class="card-header">
+                                <span class="card-title">Category Distribution</span>
+                                <span class="card-action-link" onclick="switchModule('complaints')">View All &rarr;</span>
+                            </div>
+                            <div id="chart-category-breakdown">
+                                <!-- Bars rendered by erp.js -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Department Performance & Live Activity Stream -->
+                    <div class="grid-2col">
+                        <div class="card">
+                            <div class="card-header">
+                                <span class="card-title">Department Workload &amp; Resolution</span>
+                                <span class="card-action-link" onclick="switchModule('departments')">Manage &rarr;</span>
+                            </div>
+                            <div class="table-responsive">
+                                <table class="erp-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Department</th>
+                                            <th>Staff</th>
+                                            <th>Total</th>
+                                            <th>Pending</th>
+                                            <th>Resolution %</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="dashboard-dept-tbody">
+                                        <!-- Populated via erp.js -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <div class="card-header">
+                                <span class="card-title">Recent System Activities</span>
+                                <span style="font-size: 0.8rem; color: var(--text-muted);">Audit Stream</span>
+                            </div>
+                            <div class="activity-stream" id="dashboard-activity-stream">
+                                <!-- Populated via erp.js -->
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 2. MODULE: COMPLAINT CENTER -->
+                <section id="mod-complaints" class="portal-module">
+                    <div class="module-header">
+                        <div class="module-title-group">
+                            <h1>Enterprise Complaint Center</h1>
+                            <p>Filter, assign technicians, track SLA deadlines, review comments, and resolve grievances.</p>
+                        </div>
+                        <div class="module-actions">
+                            <a href="/api/erp/reports/export-csv" class="btn btn-secondary btn-sm" download>
+                                <span>📥</span> Export Report
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Filter Bar -->
+                    <div class="filter-bar">
+                        <input type="text" class="filter-input" id="filter-comp-search" placeholder="Search ticket, student, location..." style="width: 260px;">
+                        
+                        <select class="filter-select" id="filter-comp-category">
+                            <option value="">All Categories</option>
+                            <option value="WATER">Water &amp; Plumbing</option>
+                            <option value="ELECTRICITY">Electrical</option>
+                            <option value="WIFI">Internet / Wi-Fi</option>
+                            <option value="CLEANING">Housekeeping</option>
+                            <option value="MAINTENANCE">Room Maintenance</option>
+                            <option value="HOSTEL">Mess &amp; Food</option>
+                            <option value="TRANSPORT">Security</option>
+                            <option value="OTHER">Other</option>
+                        </select>
+
+                        <select class="filter-select" id="filter-comp-status">
+                            <option value="">All Statuses</option>
+                            <option value="PENDING">Pending</option>
+                            <option value="IN_PROGRESS">In Progress</option>
+                            <option value="RESOLVED">Resolved</option>
+                        </select>
+
+                        <select class="filter-select" id="filter-comp-dept">
+                            <option value="">All Departments</option>
+                        </select>
+
+                        <button class="btn btn-secondary btn-sm" onclick="document.getElementById('filter-comp-search').value=''; document.getElementById('filter-comp-category').value=''; document.getElementById('filter-comp-status').value=''; applyComplaintFilters();">
+                            Reset
+                        </button>
+                    </div>
+
+                    <!-- Complaints Table -->
+                    <div class="card" style="padding: 0; overflow: hidden;">
+                        <div class="table-responsive">
+                            <table class="erp-table">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 60px;">Ticket</th>
+                                        <th style="width: 150px;">Category</th>
+                                        <th>Title &amp; Details</th>
+                                        <th style="width: 100px;">Priority</th>
+                                        <th style="width: 120px;">Status</th>
+                                        <th style="width: 100px;">Dept</th>
+                                        <th style="width: 170px;">Assigned Staff</th>
+                                        <th style="width: 120px;">Created</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="erp-complaints-tbody">
+                                    <!-- Populated via erp.js -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 3. MODULE: HUMAN RESOURCES (HRM) -->
+                <section id="mod-employees" class="portal-module">
+                    <div class="module-header">
+                        <div class="module-title-group">
+                            <h1>Human Resource Management</h1>
+                            <p>Directory of maintenance technicians, staff members, department allocations, and workloads.</p>
+                        </div>
+                        <div class="module-actions">
+                            <button class="btn btn-primary btn-sm" onclick="openModal('modal-add-employee')">
+                                <span>➕</span> Add Employee
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="card" style="padding: 0; overflow: hidden;">
+                        <div class="table-responsive">
+                            <table class="erp-table">
+                                <thead>
+                                    <tr>
+                                        <th>Emp Code</th>
+                                        <th>Name &amp; Email</th>
+                                        <th>Department</th>
+                                        <th>Designation</th>
+                                        <th>Status</th>
+                                        <th>Workload</th>
+                                        <th>Phone</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="erp-employees-tbody">
+                                    <!-- Populated via erp.js -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 4. MODULE: DEPARTMENTS -->
+                <section id="mod-departments" class="portal-module">
+                    <div class="module-header">
+                        <div class="module-title-group">
+                            <h1>Department Management</h1>
+                            <p>Operational departments, allocated budgets, designated managers, and staff capacities.</p>
+                        </div>
+                        <div class="module-actions">
+                            <button class="btn btn-primary btn-sm" onclick="openModal('modal-add-dept')">
+                                <span>➕</span> Create Department
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="card" style="padding: 0; overflow: hidden;">
+                        <div class="table-responsive">
+                            <table class="erp-table">
+                                <thead>
+                                    <tr>
+                                        <th>Code</th>
+                                        <th>Department Name</th>
+                                        <th>Manager / Head</th>
+                                        <th>Budget</th>
+                                        <th>Contact</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="erp-departments-tbody">
+                                    <!-- Populated via erp.js -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 5. MODULE: WORKFLOWS & APPROVALS -->
+                <section id="mod-workflows" class="portal-module">
+                    <div class="module-header">
+                        <div class="module-title-group">
+                            <h1>Workflows &amp; Approvals Center</h1>
+                            <p>Validate major equipment purchases, high-cost repairs, and multi-tier work order approvals.</p>
+                        </div>
+                    </div>
+
+                    <div class="card" style="padding: 0; overflow: hidden;">
+                        <div class="card-header" style="padding: 16px 20px; border-bottom: 1px solid var(--border-subtle); margin-bottom: 0;">
+                            <span class="card-title">Pending Authorization Queue</span>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="erp-table">
+                                <thead>
+                                    <tr>
+                                        <th>Approval #</th>
+                                        <th>Related Ticket</th>
+                                        <th>Type</th>
+                                        <th>Estimated Cost</th>
+                                        <th>Justification</th>
+                                        <th>Decision Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="erp-approvals-tbody">
+                                    <!-- Populated via erp.js -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 6. MODULE: REPORTS & BI -->
+                <section id="mod-reports" class="portal-module">
+                    <div class="module-header">
+                        <div class="module-title-group">
+                            <h1>Enterprise Reports &amp; Analytics</h1>
+                            <p>Generate institutional reports, monitor SLA compliance, and export audit datasets.</p>
+                        </div>
+                    </div>
+
+                    <div class="grid-equal">
+                        <div class="card">
+                            <span class="card-title" style="display: block; margin-bottom: 8px;">Comprehensive CSV Export</span>
+                            <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 16px;">
+                                Export all complaint records, SLA due dates, assigned technicians, and resolution timestamps into Excel-compatible CSV.
+                            </p>
+                            <a href="/api/erp/reports/export-csv" class="btn btn-primary btn-sm" download>
+                                <span>📥</span> Download Complaints Dataset (.csv)
+                            </a>
+                        </div>
+
+                        <div class="card">
+                            <span class="card-title" style="display: block; margin-bottom: 8px;">SLA Enforcement Summary</span>
+                            <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 16px;">
+                                Critical / Urgent tickets maintain a strict 4-hour resolution deadline. High priority tickets expire in 12 hours.
+                            </p>
+                            <div style="font-size: 0.85rem; font-weight: 600; color: #16a34a;">
+                                Current Campus Compliance: Active 100%
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 7. MODULE: USER & RBAC MANAGEMENT -->
+                <section id="mod-users" class="portal-module">
+                    <div class="module-header">
+                        <div class="module-title-group">
+                            <h1>User &amp; Role-Based Access Control (RBAC)</h1>
+                            <p>Manage user roles: Super Admin, Admin, Department Manager, Staff Employee, and Complaint Reporter.</p>
+                        </div>
+                        <div class="module-actions">
+                            <button class="btn btn-primary btn-sm" onclick="openModal('modal-add-user')">
+                                <span>➕</span> Add Enterprise User
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="card" style="padding: 0; overflow: hidden;">
+                        <div class="table-responsive">
+                            <table class="erp-table">
+                                <thead>
+                                    <tr>
+                                        <th>User ID</th>
+                                        <th>Name &amp; Email</th>
+                                        <th>Assigned RBAC Role</th>
+                                        <th>Department</th>
+                                        <th>Status</th>
+                                        <th>Registered</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="erp-users-tbody">
+                                    <!-- Populated via erp.js -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 8. MODULE: SYSTEM & AUDIT -->
+                <section id="mod-settings" class="portal-module">
+                    <div class="module-header">
+                        <div class="module-title-group">
+                            <h1>System Architecture &amp; Audit Logs</h1>
+                            <p>Inspect institutional configuration, database health, SLA rules, and immutable security audit logs.</p>
+                        </div>
+                    </div>
+
+                    <div class="card" style="margin-bottom: 24px;">
+                        <span class="card-title" style="display: block; margin-bottom: 12px;">System Environment</span>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; font-size: 0.88rem;">
+                            <div><strong style="color: var(--text-muted);">Application:</strong> SRM Smart Complaint ERP</div>
+                            <div><strong style="color: var(--text-muted);">Framework:</strong> Spring Boot 3.3.3 / Java 17</div>
+                            <div><strong style="color: var(--text-muted);">Database:</strong> PostgreSQL 16 (HikariCP)</div>
+                            <div><strong style="color: var(--text-muted);">Security:</strong> HttpOnly Sessions + Salted SHA-256</div>
+                        </div>
+                    </div>
+
+                    <div class="card" style="padding: 0; overflow: hidden;">
+                        <div class="card-header" style="padding: 16px 20px; border-bottom: 1px solid var(--border-subtle); margin-bottom: 0;">
+                            <span class="card-title">Recent System Audit Ledger</span>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="erp-table">
+                                <thead>
+                                    <tr>
+                                        <th>Log #</th>
+                                        <th>Action</th>
+                                        <th>Operator</th>
+                                        <th>Details</th>
+                                        <th>Timestamp</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="erp-audit-tbody">
+                                    <!-- Populated via erp.js -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+            </main>
+        </div>
+    </div>
+
+    <!-- ==========================================================================
+         Modals
+         ========================================================================== -->
+
+    <!-- Modal: Complaint Detail Inspection Slide-over -->
+    <div class="modal-backdrop" id="modal-complaint-detail">
+        <div class="modal-window large">
+            <div class="modal-header">
+                <div>
+                    <span id="detail-ticket-status"></span>
+                    <h3 class="modal-title" id="detail-ticket-id" style="margin-top: 4px;">Ticket Details</h3>
+                </div>
+                <button class="modal-close-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px; gap: 16px;">
+                    <div>
+                        <h2 id="detail-ticket-title" style="font-size: 1.25rem; font-weight: 700; color: var(--text-primary);">Complaint Title</h2>
+                        <div style="font-size: 0.82rem; color: var(--text-muted); margin-top: 2px;">
+                            Category: <strong id="detail-ticket-category" style="color: var(--brand-navy);">-</strong> &bull; 
+                            Priority: <span id="detail-ticket-priority">-</span>
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 8px;">
+                        <button class="btn btn-primary btn-sm" onclick="openAssignModalForActive()">
+                            <span>👤</span> Assign Staff
+                        </button>
+                        <button class="btn btn-secondary btn-sm" onclick="handleEscalateTicket()" style="color: #ef4444;">
+                            <span>⚠️</span> Escalate
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Info Grid -->
+                <div style="background: var(--bg-app); padding: 14px 18px; border-radius: var(--radius-md); border: 1px solid var(--border-subtle); margin-bottom: 18px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 0.865rem;">
+                    <div>Resident: <strong id="detail-ticket-student">-</strong></div>
+                    <div>Location: <strong id="detail-ticket-location">-</strong></div>
+                    <div>Department: <strong id="detail-ticket-dept">-</strong></div>
+                    <div>Assigned Staff: <strong id="detail-ticket-staff" style="color: var(--brand-navy);">-</strong></div>
+                </div>
+
+                <!-- Description -->
+                <div style="margin-bottom: 20px;">
+                    <div style="font-weight: 600; font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 4px;">Resident Description</div>
+                    <div id="detail-ticket-desc" style="background: var(--bg-surface); border: 1px solid var(--border-subtle); padding: 12px; border-radius: var(--radius-md); font-size: 0.88rem; white-space: pre-wrap;"></div>
+                </div>
+
+                <!-- Comments & Staff Notes Section -->
+                <div style="margin-bottom: 20px;">
+                    <div style="font-weight: 600; font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 8px;">Discussion &amp; Staff Notes</div>
+                    <div id="detail-comments-stream" style="max-height: 200px; overflow-y: auto; margin-bottom: 10px;">
+                        <!-- Comments populated by erp.js -->
+                    </div>
+                    <form id="form-detail-comment" style="display: flex; gap: 8px; align-items: center;">
+                        <input type="text" class="form-control" id="input-comment-msg" placeholder="Write a comment or internal staff note..." style="flex: 1;" required>
+                        <label style="display: flex; align-items: center; gap: 4px; font-size: 0.8rem; white-space: nowrap; cursor: pointer;">
+                            <input type="checkbox" id="check-comment-internal"> Internal Note
+                        </label>
+                        <button type="submit" class="btn btn-secondary btn-sm">Post</button>
+                    </form>
+                </div>
+
+                <!-- Audit History -->
+                <div>
+                    <div style="font-weight: 600; font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 6px;">Audit Trail History</div>
+                    <div id="detail-history-stream" style="max-height: 140px; overflow-y: auto;">
+                        <!-- History populated by erp.js -->
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary btn-modal-cancel">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Assign Employee -->
+    <div class="modal-backdrop" id="modal-assign-employee">
+        <div class="modal-window">
+            <div class="modal-header">
+                <h3 class="modal-title">Assign Technician / Staff</h3>
+                <button class="modal-close-btn">&times;</button>
+            </div>
+            <form id="form-assign-employee">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="assign-select-emp">Select Qualified Technician *</label>
+                        <select class="form-control" id="assign-select-emp" required>
+                            <!-- Populated via erp.js -->
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="assign-text-notes">Assignment Instructions / Scheduling Notes</label>
+                        <textarea class="form-control" id="assign-text-notes" rows="3" placeholder="e.g. Inspect restroom drain line with 25mm auger at 3 PM"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-modal-cancel">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Assignment</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Add Employee (HRM) -->
+    <div class="modal-backdrop" id="modal-add-employee">
+        <div class="modal-window">
+            <div class="modal-header">
+                <h3 class="modal-title">Register Maintenance Employee</h3>
+                <button class="modal-close-btn">&times;</button>
+            </div>
+            <form id="form-add-employee">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="emp-code">Employee Code (Optional, auto-generated if blank)</label>
+                        <input type="text" class="form-control" id="emp-code" placeholder="e.g. EMP-ELEC-05">
+                    </div>
+                    <div class="form-group">
+                        <label for="emp-name">Full Name *</label>
+                        <input type="text" class="form-control" id="emp-name" placeholder="e.g. Rajesh Kumar" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="emp-email">Email Address *</label>
+                        <input type="email" class="form-control" id="emp-email" placeholder="e.g. rajesh.kumar@srmist.edu.in" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="emp-dept">Department *</label>
+                        <select class="form-control" id="emp-dept" required>
+                            <!-- Populated via erp.js -->
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="emp-designation">Designation / Role *</label>
+                        <input type="text" class="form-control" id="emp-designation" placeholder="e.g. Master Electrician" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="emp-phone">Phone / Extension</label>
+                        <input type="text" class="form-control" id="emp-phone" placeholder="e.g. +91 98401 23456">
+                    </div>
+                    <div class="form-group">
+                        <label for="emp-skills">Skills &amp; Specializations</label>
+                        <input type="text" class="form-control" id="emp-skills" placeholder="e.g. Circuit breaker, High voltage, Wiring">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-modal-cancel">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Employee</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Add Department -->
+    <div class="modal-backdrop" id="modal-add-dept">
+        <div class="modal-window">
+            <div class="modal-header">
+                <h3 class="modal-title">Create Operational Department</h3>
+                <button class="modal-close-btn">&times;</button>
+            </div>
+            <form id="form-add-dept">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="dept-code">Department Code *</label>
+                        <input type="text" class="form-control" id="dept-code" placeholder="e.g. HVAC" required maxlength="10">
+                    </div>
+                    <div class="form-group">
+                        <label for="dept-name">Department Name *</label>
+                        <input type="text" class="form-control" id="dept-name" placeholder="e.g. Air Conditioning &amp; HVAC" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="dept-desc">Description</label>
+                        <textarea class="form-control" id="dept-desc" rows="2" placeholder="Responsibilities and scope"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="dept-budget">Allocated Budget ($)</label>
+                        <input type="number" class="form-control" id="dept-budget" placeholder="e.g. 50000" step="1000">
+                    </div>
+                    <div class="form-group">
+                        <label for="dept-email">Contact Email</label>
+                        <input type="email" class="form-control" id="dept-email" placeholder="e.g. hvac.hostel@srmist.edu.in">
+                    </div>
+                    <div class="form-group">
+                        <label for="dept-phone">Contact Extension</label>
+                        <input type="text" class="form-control" id="dept-phone" placeholder="e.g. Ext: 4409">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-modal-cancel">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Create Department</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Add User (RBAC) -->
+    <div class="modal-backdrop" id="modal-add-user">
+        <div class="modal-window">
+            <div class="modal-header">
+                <h3 class="modal-title">Add Enterprise User</h3>
+                <button class="modal-close-btn">&times;</button>
+            </div>
+            <form id="form-add-user">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="user-name">Full Name *</label>
+                        <input type="text" class="form-control" id="user-name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="user-email">Email Address *</label>
+                        <input type="email" class="form-control" id="user-email" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="user-password">Initial Password *</label>
+                        <input type="password" class="form-control" id="user-password" required minlength="6">
+                    </div>
+                    <div class="form-group">
+                        <label for="user-role">Role *</label>
+                        <select class="form-control" id="user-role" required>
+                            <option value="EMPLOYEE">EMPLOYEE (Technician / Staff)</option>
+                            <option value="DEPT_MANAGER">DEPT_MANAGER (Department Head)</option>
+                            <option value="ADMIN">ADMIN (Warden / Administrator)</option>
+                            <option value="SUPER_ADMIN">SUPER_ADMIN (Executive)</option>
+                            <option value="COMPLAINT_REPORTER">COMPLAINT_REPORTER (Resident)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="user-dept">Department</label>
+                        <input type="text" class="form-control" id="user-dept" placeholder="e.g. Electrical">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-modal-cancel">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Create User</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="/js/api.js?v=4"></script>
+    <script src="/js/erp.js?v=4"></script>
+</body>
+</html>

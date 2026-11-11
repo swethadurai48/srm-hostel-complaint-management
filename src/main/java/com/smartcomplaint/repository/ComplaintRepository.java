@@ -3,6 +3,7 @@ package com.smartcomplaint.repository;
 import com.smartcomplaint.model.Category;
 import com.smartcomplaint.model.Complaint;
 import com.smartcomplaint.model.ComplaintStatus;
+import com.smartcomplaint.model.Department;
 import com.smartcomplaint.model.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -38,4 +39,21 @@ public interface ComplaintRepository extends JpaRepository<Complaint, Long> {
                                           @Param("status") ComplaintStatus status);
 
     long countByStatus(ComplaintStatus status);
+
+    // Enterprise ERP Department & Workflow queries
+    List<Complaint> findByDepartmentOrderByCreatedAtDesc(Department department);
+
+    long countByDepartment(Department department);
+
+    long countByDepartmentAndStatus(Department department, ComplaintStatus status);
+
+    List<Complaint> findByIsEscalatedTrueOrderByCreatedAtDesc();
+
+    long countByIsEscalatedTrue();
+
+    @Query("SELECT count(c) FROM Complaint c WHERE c.status != 'RESOLVED' AND c.slaDueDate IS NOT NULL AND c.slaDueDate < CURRENT_TIMESTAMP")
+    long countOverdueComplaints();
+
+    @Query("SELECT c FROM Complaint c WHERE c.status != 'RESOLVED' AND c.slaDueDate IS NOT NULL AND c.slaDueDate < CURRENT_TIMESTAMP ORDER BY c.slaDueDate ASC")
+    List<Complaint> findOverdueComplaints();
 }

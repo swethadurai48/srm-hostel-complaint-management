@@ -33,6 +33,10 @@ public class ComplaintRequest {
 
     private String attachmentUrl;
 
+    private Long departmentId;
+
+    private Double costEstimate;
+
     public ComplaintRequest() {
     }
 
@@ -114,5 +118,21 @@ public class ComplaintRequest {
 
     public void setAttachmentUrl(String attachmentUrl) {
         this.attachmentUrl = attachmentUrl;
+    }
+
+    public Long getDepartmentId() {
+        return departmentId;
+    }
+
+    public void setDepartmentId(Long departmentId) {
+        this.departmentId = departmentId;
+    }
+
+    public Double getCostEstimate() {
+        return costEstimate;
+    }
+
+    public void setCostEstimate(Double costEstimate) {
+        this.costEstimate = costEstimate;
     }
 }

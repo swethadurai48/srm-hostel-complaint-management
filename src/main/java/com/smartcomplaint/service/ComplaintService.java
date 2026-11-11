@@ -1,14 +1,14 @@
 package com.smartcomplaint.service;
 
 import com.smartcomplaint.dto.ComplaintRequest;
-import com.smartcomplaint.model.Category;
-import com.smartcomplaint.model.Complaint;
-import com.smartcomplaint.model.ComplaintStatus;
-import com.smartcomplaint.model.User;
+import com.smartcomplaint.model.*;
+import com.smartcomplaint.repository.ComplaintHistoryRepository;
 import com.smartcomplaint.repository.ComplaintRepository;
+import com.smartcomplaint.repository.DepartmentRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -17,9 +17,15 @@ import java.util.Map;
 public class ComplaintService {
 
     private final ComplaintRepository complaintRepository;
+    private final DepartmentRepository departmentRepository;
+    private final ComplaintHistoryRepository historyRepository;
 
-    public ComplaintService(ComplaintRepository complaintRepository) {
+    public ComplaintService(ComplaintRepository complaintRepository,
+                            DepartmentRepository departmentRepository,
+                            ComplaintHistoryRepository historyRepository) {
         this.complaintRepository = complaintRepository;
+        this.departmentRepository = departmentRepository;
+        this.historyRepository = historyRepository;
     }
 
     /**
@@ -43,16 +49,57 @@ public class ComplaintService {
             loc = sb.toString();
         }
         complaint.setLocation(loc != null ? loc.trim() : null);
-        complaint.setPriority(req.getPriority() != null ? req.getPriority() : com.smartcomplaint.model.Priority.MEDIUM);
+        Priority prio = req.getPriority() != null ? req.getPriority() : Priority.MEDIUM;
+        complaint.setPriority(prio);
         complaint.setHostel(req.getHostel());
         complaint.setBlock(req.getBlock());
         complaint.setFloor(req.getFloor());
         complaint.setRoomNumber(req.getRoomNumber());
         complaint.setAttachmentUrl(req.getAttachmentUrl());
+        complaint.setCostEstimate(req.getCostEstimate() != null ? req.getCostEstimate() : 0.0);
         complaint.setStudent(student);
         complaint.setStatus(ComplaintStatus.PENDING);
+        complaint.setIsEscalated(false);
 
-        return complaintRepository.save(complaint);
+        // Auto-assign Department
+        if (req.getDepartmentId() != null) {
+            departmentRepository.findById(req.getDepartmentId()).ifPresent(complaint::setDepartment);
+        } else {
+            String deptCode = switch (req.getCategory()) {
+                case ELECTRICITY -> "ELEC";
+                case WATER -> "PLUMB";
+                case WIFI -> "NET";
+                case CLEANING -> "HOUSE";
+                case MAINTENANCE -> "MAINT";
+                case HOSTEL -> "MESS";
+                case TRANSPORT -> "SEC";
+                default -> "MAINT";
+            };
+            departmentRepository.findByCode(deptCode).ifPresent(complaint::setDepartment);
+        }
+
+        // SLA calculation
+        int slaHours = switch (prio) {
+            case URGENT -> 4;
+            case HIGH -> 12;
+            case MEDIUM -> 24;
+            case LOW -> 48;
+        };
+        complaint.setSlaDueDate(LocalDateTime.now().plusHours(slaHours));
+
+        Complaint saved = complaintRepository.save(complaint);
+
+        // Record history
+        historyRepository.save(new ComplaintHistory(
+                saved.getId(),
+                student,
+                "CREATED",
+                "",
+                "Created with priority " + prio.name(),
+                "New ticket logged"
+        ));
+
+        return saved;
     }
 
     /**
@@ -102,11 +149,23 @@ public class ComplaintService {
     @Transactional
     public Complaint updateStatus(Long complaintId, ComplaintStatus newStatus, String assignedStaff) {
         Complaint complaint = getComplaintById(complaintId);
+        ComplaintStatus oldStatus = complaint.getStatus();
         complaint.setStatus(newStatus);
         if (assignedStaff != null) {
             complaint.setAssignedStaff(assignedStaff.trim());
         }
-        return complaintRepository.save(complaint);
+        Complaint saved = complaintRepository.save(complaint);
+
+        historyRepository.save(new ComplaintHistory(
+                complaintId,
+                null,
+                "STATUS_UPDATED",
+                oldStatus.name(),
+                newStatus.name(),
+                "Status transitioned to " + newStatus.name() + (assignedStaff != null ? " with staff " + assignedStaff : "")
+        ));
+
+        return saved;
     }
 
     /**
@@ -116,7 +175,18 @@ public class ComplaintService {
     public Complaint addAdminResponse(Long complaintId, String responseText) {
         Complaint complaint = getComplaintById(complaintId);
         complaint.setAdminResponse(responseText.trim());
-        return complaintRepository.save(complaint);
+        Complaint saved = complaintRepository.save(complaint);
+
+        historyRepository.save(new ComplaintHistory(
+                complaintId,
+                null,
+                "ADMIN_RESPONSE",
+                "",
+                responseText.trim(),
+                "Official administrative response added"
+        ));
+
+        return saved;
     }
 
     /**

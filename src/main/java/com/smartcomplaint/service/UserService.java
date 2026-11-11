@@ -12,6 +12,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.HexFormat;
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -122,5 +123,33 @@ public class UserService {
         } catch (NoSuchAlgorithmException e) {
             throw new RuntimeException("SHA-256 algorithm not available", e);
         }
+    }
+
+    @Transactional(readOnly = true)
+    public List<User> findAllUsers() {
+        return userRepository.findAll();
+    }
+
+    @Transactional
+    public User updateUserRole(Long userId, Role newRole) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found: " + userId));
+        user.setRole(newRole);
+        return userRepository.save(user);
+    }
+
+    @Transactional
+    public User createEnterpriseUser(String name, String email, String password, Role role, String department) {
+        String cleanEmail = email.trim().toLowerCase();
+        if (userRepository.existsByEmail(cleanEmail)) {
+            throw new IllegalArgumentException("Email already registered: " + cleanEmail);
+        }
+        User user = new User();
+        user.setName(name.trim());
+        user.setEmail(cleanEmail);
+        user.setPassword(hashPassword(password));
+        user.setRole(role);
+        user.setDepartment(department);
+        return userRepository.save(user);
     }
 }
